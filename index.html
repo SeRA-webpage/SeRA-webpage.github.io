@@ -1,0 +1,1872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SeRA: Old Experience, New Lessons</title>
+<meta name="description" content="SeRA relabels autonomous robot experience with later policies and learns from the relabels through set-valued supervision.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='17' r='13' fill='%2300a6d6'/%3E%3C/svg%3E">
+<style>
+@font-face { font-family: "Asap"; src: url("assets/fonts/asap.woff2") format("woff2"); font-weight: 300 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Asap"; src: url("assets/fonts/asap-italic.woff2") format("woff2"); font-weight: 300 700; font-style: italic; font-display: swap; }
+@font-face { font-family: "Source Code Pro"; src: url("assets/fonts/source-code-pro.woff2") format("woff2"); font-weight: 400 600; font-style: normal; font-display: swap; }
+
+:root {
+  /* --accent-text is the same hue as --accent, dark enough for small text on white. */
+  --accent: #00a6d6;
+  --accent-text: #00799c;
+  --accent-tint: #e6f6fb;
+  --ink: #333333;
+  --muted: #737373;
+  --author: #8b959e;
+  --rule: #d3e3ea;
+  --line: #edf1f3;
+  /* Same meanings as the paper figures, darkened for text on white. */
+  --human: #5b3cc4;
+  --robot: #b95a12;
+  --relabel: #357e35;
+  --mono: "Source Code Pro", ui-monospace, monospace;
+  --sans: "Asap", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+/* Sizes are in rem, so this one rule scales the page. 1140px / 1.15 leaves the layout its full 991px. */
+@media (min-width: 1140px) { html { font-size: 115%; } }
+body { margin: 0; background: #ffffff; color: var(--ink); font-family: var(--sans); font-size: 1.25rem; line-height: 1.5; }
+a { color: var(--accent-text); text-decoration: none; }
+a:hover { text-decoration: underline; }
+p { margin: 0 0 0.875rem; }
+h2, h3, h4 { color: var(--accent); font-family: var(--sans); scroll-margin-top: 1.25rem; }
+h3, h4 { color: var(--accent-text); }
+h2 { margin: 0 0 0.9375rem; font-size: 2rem; font-weight: 400; line-height: 1.2; }
+h3 { margin: 2.625rem 0 0.875rem; font-size: 1.5625rem; font-weight: 400; line-height: 1.25; }
+h4 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+img { display: block; max-width: 100%; height: auto; }
+strong { font-weight: 700; }
+.lead { color: var(--accent-text); font-weight: 700; }
+.c-human { color: var(--human); font-weight: 600; }
+.c-robot { color: var(--robot); font-weight: 600; }
+.c-relabel { color: var(--relabel); font-weight: 600; }
+
+.container { max-width: 68.25rem; margin: 0 auto; padding: 0 1rem; }
+.section-line { border: 0; border-top: 1px solid var(--rule); margin: 2.125rem 0 1.875rem; }
+
+/* Left-rail contents */
+.page-toc { position: fixed; top: 240px; left: 20px; z-index: 10; width: 170px; }
+.page-toc-title { margin: 0 0 8px 12px; color: #999999; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.page-toc ul { list-style: none; margin: 0; padding: 0; }
+.page-toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--rule); color: #8a8a8a; font-size: 13px; line-height: 1.3; transition: color 0.15s ease, border-color 0.15s ease; }
+.page-toc a:hover { color: var(--accent-text); text-decoration: none; }
+.page-toc a.is-active { color: var(--accent-text); border-left-color: var(--accent); font-weight: 600; }
+.page-toc .toc-sub a { padding-left: 22px; font-size: 12px; }
+@media (max-width: 1599px) { .page-toc { display: none; } }
+
+/* Header */
+.hero { padding-top: 4.5rem; text-align: center; }
+.hero h1 { margin: 0; color: var(--accent); font-size: clamp(2.375rem, 7vw, 3.875rem); font-weight: 700; line-height: 1.1; }
+.hero-subtitle { margin: 0.75rem 0 0; color: var(--accent); font-size: clamp(1.3125rem, 3.4vw, 1.9375rem); line-height: 1.25; text-wrap: balance; }
+.hero-authors { margin: 1.25rem 0 0; color: var(--author); font-size: 1.375rem; }
+.hero-status { margin: 2px 0 0; color: #626a73; font-size: 1.0625rem; }
+.hero-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.625rem; margin-top: 1.25rem; }
+.pill, .pill:focus-visible { display: inline-flex; align-items: center; padding: 0.375rem 0.9375rem; border: 1px solid var(--accent); border-radius: 62.4375rem; background: #ffffff; color: var(--accent-text); font-family: var(--sans); font-size: 1rem; font-weight: 500; line-height: 1.2; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
+.pill:hover, .pill.is-on { border-color: var(--accent-text); background: var(--accent-text); color: #ffffff; text-decoration: none; }
+.tldr { margin: 1.625rem 0 1rem; text-align: center; text-wrap: balance; }
+
+/* Videos */
+.video-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; }
+.video-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.video-grid[hidden] { display: none; }
+.task-picker, .seed-picker { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-bottom: 0.625rem; }
+.seed-picker .pill { padding: 0.25rem 0.75rem; font-size: 0.875rem; }
+/* A lead clip beside six smaller ones: seven clips with no empty cell, and SeRA at twice the width. */
+.video-grid.matched { grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: 0.625rem 0.375rem; }
+.video-grid.matched .video-cell:first-child { display: flex; flex-direction: column; grid-row: span 2; }
+.video-grid.matched .video-cell:first-child figcaption { display: flex; flex: 1; align-items: center; justify-content: center; }
+.video-grid.matched .video-cell .video-media { border-radius: 0.5rem; }
+.video-cell { margin: 0; min-width: 0; }
+.video-cell figcaption { padding: 0.4375rem 0.25rem 0; color: #555555; font-size: 1rem; line-height: 1.25; text-align: center; }
+.video-cell figcaption b { color: var(--ink); font-weight: 600; }
+.video-media { position: relative; overflow: hidden; background: #1c1c1c; line-height: 0; }
+.video-cell:first-child .video-media { border-radius: 0.5rem 0 0 0.5rem; }
+.video-cell:last-child .video-media { border-radius: 0 0.5rem 0.5rem 0; }
+.video-media video { display: block; width: 100%; aspect-ratio: 8 / 9; object-fit: cover; }
+.video-media.square video { aspect-ratio: 1 / 1; }
+.video-toggle { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.video-toggle::after { content: ""; position: absolute; left: 50%; top: 50%; width: 2.875rem; height: 2.875rem; margin: -1.4375rem 0 0 -1.4375rem; border-radius: 50%; background: rgba(26, 22, 18, 0.55) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' d='M9 6.5v11l9-5.5z'/%3E%3C/svg%3E") center / 1.75rem no-repeat; transition: opacity 0.15s ease; }
+.video-media.is-playing .video-toggle::after { opacity: 0; }
+.video-toggle:focus-visible { outline: 3px solid var(--accent-text); outline-offset: -3px; }
+.video-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, 0.28); pointer-events: none; }
+.video-progress span { display: block; width: 0; height: 100%; background: #faf7f0; }
+.video-outcome { position: absolute; top: 0.4375rem; left: 0.4375rem; z-index: 2; padding: 3px 0.5rem; border-radius: 62.4375rem; background: rgba(26, 22, 18, 0.72); color: #ffffff; font-size: 0.75rem; font-weight: 600; line-height: 1.2; pointer-events: none; }
+.video-outcome.success { background: rgba(35, 105, 45, 0.92); }
+.video-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-top: 0.625rem; }
+.video-note p { margin: 0; color: var(--muted); font-size: 1rem; font-style: italic; }
+.hero-result { margin: 1.125rem 0 0; }
+
+.video-panel { margin-top: 1.75rem; }
+.video-panel + p { margin-top: 1.25rem; }
+.video-panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 0.5625rem; }
+.video-panel-controls { display: flex; gap: 0.5rem; }
+.video-panel-controls .pill { padding: 0.25rem 0.75rem; font-size: 0.875rem; }
+
+/* Abstract, lists */
+.abstract { margin-top: 1.625rem; }
+.findings { margin: 0.875rem 0 0; padding-left: 1.375rem; }
+.findings li { margin-bottom: 0.4375rem; }
+.findings li::marker { color: var(--accent); }
+
+
+/* Step-by-step figure videos */
+.process { margin: 1.25rem 0 1.125rem; }
+.process.narrow { max-width: 56.25rem; margin-left: auto; margin-right: auto; }
+.process .video-media { overflow: visible; background: #ffffff; }
+.process .video-media video { aspect-ratio: auto; height: auto; background: #ffffff; }
+.process .video-toggle::after { display: none; }
+.process .video-progress { bottom: -0.3125rem; height: 3px; border-radius: 2px; background: var(--rule); }
+.process .video-progress span { border-radius: 2px; background: var(--accent); }
+.process-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.625rem 1rem; margin-top: 1rem; }
+.process-steps { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0; padding: 0; list-style: none; }
+.process-steps button { width: 2rem; height: 2rem; padding: 0; border: 1px solid var(--rule); border-radius: 50%; background: #ffffff; color: #6b7a80; font-family: var(--sans); font-size: 0.9375rem; font-weight: 600; line-height: 1; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+.process-steps button:hover { border-color: var(--accent-text); color: var(--accent-text); }
+.process-steps button.is-done { border-color: var(--accent); background: var(--accent-tint); color: var(--accent-text); }
+.process-steps button.is-active { border-color: var(--accent-text); background: var(--accent-text); color: #ffffff; }
+.process-controls { display: flex; gap: 0.5rem; }
+.process-controls .pill { padding: 0.25rem 0.75rem; font-size: 0.875rem; }
+.process-caption { min-height: 6rem; margin: 0.625rem 0 0; }
+.process-caption .count { display: block; color: var(--muted); font-size: 0.875rem; }
+.process-link { margin: 0; font-size: 0.9375rem; }
+.process:fullscreen { display: flex; flex-direction: column; justify-content: center; margin: 0; padding: 1.5rem; max-width: none; background: #ffffff; overflow: auto; }
+.process:fullscreen .process-caption { min-height: 0; }
+.process:fullscreen .process-link { display: none; }
+.process:fullscreen video { max-height: 72vh; object-fit: contain; }
+.process::backdrop { background: #ffffff; }
+
+/* Interactive demo */
+.demo { margin: 1.25rem 0 0.625rem; }
+.demo-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.625rem 1rem; margin-bottom: 0.5rem; }
+.demo-meta { color: #7a7a7a; font-family: var(--mono); font-size: 0.8125rem; }
+.demo-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.demo-actions .pill { padding: 0.25rem 0.75rem; font-size: 0.875rem; }
+.demo-canvas { display: block; width: 100%; height: auto; background: #ffffff; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.demo-canvas .grab { cursor: grab; touch-action: none; }
+.demo-canvas.is-dragging .grab { cursor: grabbing; }
+.demo-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1.125rem; margin-top: 0.25rem; font-size: 0.875rem; color: #666666; }
+.demo-legend i { display: inline-block; width: 0.6875rem; height: 0.6875rem; margin-right: 0.375rem; border-radius: 50%; border: 2px solid; vertical-align: -1px; }
+.demo-sliders { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.875rem 1.75rem; margin-top: 0.875rem; }
+.demo-slider label { display: flex; justify-content: space-between; gap: 0.625rem; font-size: 1rem; }
+.demo-slider sup { line-height: 0; }
+.demo-slider output { color: var(--accent-text); font-family: var(--mono); font-size: 0.875rem; font-weight: 600; }
+.demo-slider input { display: block; width: 100%; margin: 0.3125rem 0 0; accent-color: var(--accent-text); }
+.demo-slider .ends { display: flex; justify-content: space-between; color: #8a8a8a; font-size: 0.8125rem; }
+.demo-table-wrap { margin-top: 1rem; overflow-x: auto; }
+.demo-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.demo-table th, .demo-table td { padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+.demo-table th:first-child { color: #555555; font-family: var(--sans); font-size: 0.9375rem; font-weight: 500; text-align: left; }
+.demo-table thead th { color: #555555; font-weight: 600; }
+.demo-table .on { background: #eaf5e4; color: #2a6a2a; font-weight: 600; }
+.demo-table .off { background: #f2f2f2; color: #7a7a7a; }
+.demo-table .fail { color: #a6192e; font-weight: 600; }
+.demo-table .human { background: #eeeafa; color: var(--human); font-weight: 600; }
+.demo-verdict { min-height: 3.375rem; margin: 0.75rem 0 0; font-size: 1.125rem; }
+.demo-note { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.9375rem; font-style: italic; }
+@media (max-width: 767px) { .demo-sliders { grid-template-columns: 1fr; } }
+
+/* Result tables */
+.table-scroll { margin: 1rem 0 0.5rem; overflow-x: auto; border: 1px solid var(--rule); border-radius: 0.5rem; }
+.results { width: 100%; border-collapse: collapse; color: var(--ink); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.results th, .results td { padding: 0.375rem 0.4375rem; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); line-height: 1.2; text-align: center; white-space: nowrap; }
+.results th:last-child, .results td:last-child { border-right: 0; }
+.results tbody tr:last-child th, .results tbody tr:last-child td { border-bottom: 0; }
+.results thead th { background: #ffffff; color: #555555; font-size: 0.8125rem; font-weight: 600; }
+.results tbody th { color: #444444; font-size: 0.84375rem; font-weight: 600; text-align: left; }
+.results .group-end { border-right: 1px solid #c5d9e1; }
+.results .ours th, .results .ours td { background: #f6fbfd; }
+.results .sd { display: block; margin-top: 2px; color: #8a8a8a; font-size: 0.6875rem; }
+.results .best { background: var(--accent-tint) !important; color: var(--accent-text); font-weight: 700; }
+.results .best .sd { color: #4b8799; }
+.results.comfortable { font-size: 1rem; }
+.results.comfortable th, .results.comfortable td { padding: 0.4375rem 0.625rem; }
+.results.comfortable thead th, .results.comfortable tbody th { font-size: 0.9375rem; }
+.table-note { margin: 0 0 0.75rem; color: #6b6b6b; font-size: 1rem; line-height: 1.4; }
+#simulation-table { min-width: 53.75rem; }
+
+.site-footer { margin: 2.75rem 0 3.5rem; color: var(--muted); font-size: 0.9375rem; text-align: center; }
+
+@media (max-width: 991px) {
+  body { font-size: 1.1875rem; }
+  .hero { padding-top: 3rem; }
+}
+@media (max-width: 767px) {
+  h2 { font-size: 1.75rem; }
+  .process-caption { min-height: 11.875rem; }
+  .video-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 0.75rem; }
+  .video-cell .video-media { border-radius: 0.5rem; }
+  .video-cell:nth-child(odd) .video-media { border-radius: 0.5rem 0 0 0.5rem; }
+  .video-cell:nth-child(even) .video-media { border-radius: 0 0.5rem 0.5rem 0; }
+  .video-grid.matched { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem 0.375rem; }
+  .video-grid.matched .video-cell:first-child { grid-column: 1 / -1; grid-row: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<nav class="page-toc" aria-label="Page sections">
+  <div class="page-toc-title">Contents</div>
+  <ul>
+    <li><a href="#motivation">Motivation</a></li>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#interactive">Interactive Demo</a></li>
+    <li><a href="#experiments">Experiments</a></li>
+    <li class="toc-sub"><a href="#simulation">Simulation Benchmarks</a></li>
+    <li class="toc-sub"><a href="#analysis">Component Analysis</a></li>
+    <li class="toc-sub"><a href="#real-results">Real-Robot Results</a></li>
+  </ul>
+</nav>
+
+<main class="container">
+
+  <header class="hero">
+    <h1>Old Experience, New Lessons</h1>
+    <p class="hero-subtitle">Relabeling Autonomous Robot Rollouts in Interactive Imitation Learning</p>
+    <p class="hero-authors">Anonymous Authors</p>
+    <p class="hero-status">Under review</p>
+    <div class="hero-links">
+      <a class="pill" href="#overview">Method</a>
+      <a class="pill" href="#interactive">Interactive Demo</a>
+      <a class="pill" href="#sim-rollouts">Videos</a>
+      <a class="pill" href="#simulation">Results</a>
+    </div>
+  </header>
+
+  <p class="tldr"><span class="lead">TL;DR:</span> SeRA relabels old robot experience with later policies, then learns from the relabels as desired action sets, not exact targets.</p>
+
+  <section aria-label="Real-robot rollouts of SeRA">
+    <div class="video-grid two" id="hero-videos">
+      <figure class="video-cell">
+        <div class="video-media">
+          <video src="assets/videos/sera-front.mp4" poster="assets/posters/sera-front.jpg" muted playsinline preload="auto"></video>
+          <button class="video-toggle" type="button" aria-label="Play SeRA rollout, top tomato at front"></button>
+          <div class="video-progress"><span></span></div>
+        </div>
+        <figcaption><b>SeRA</b>, top tomato at front</figcaption>
+      </figure>
+      <figure class="video-cell">
+        <div class="video-media">
+          <video src="assets/videos/sera-back.mp4" poster="assets/posters/sera-back.jpg" muted playsinline preload="auto"></video>
+          <button class="video-toggle" type="button" aria-label="Play SeRA rollout, top tomato at back"></button>
+          <div class="video-progress"><span></span></div>
+        </div>
+        <figcaption><b>SeRA</b>, top tomato at back</figcaption>
+      </figure>
+    </div>
+    <div class="video-note">
+      <p>Autonomous evaluation rollouts at 4× speed. The inset is the wrist camera.</p>
+      <button class="pill" type="button" id="hero-replay">Replay</button>
+    </div>
+    <p class="hero-result">On the real robot, SeRA succeeds in <strong>16 of 20</strong> trials, compared with <strong>8 of 20</strong> for SDP, using the same human feedback and training budget.</p>
+  </section>
+
+  <section class="abstract">
+    <p><span class="lead">Abstract:</span> Interactive imitation learning enables robots to learn from human interventions during deployment. These interactions naturally produce sparse human corrections and abundant autonomous robot experience without human action labels. Yet existing methods either leave this experience unused for action supervision or imitate historical robot actions, which can reinforce suboptimal behavior. To address this limitation, we propose Set-valued Relabeling of Autonomous experience (SeRA), a framework that learns from autonomous robot experience through set-valued supervision of policy relabels. Later policy checkpoints relabel this experience, and agreement across checkpoints filters the relabels. Since agreement does not guarantee correctness, SeRA constructs desired action sets around accepted relabels. Following Set-Supervised Diffusion Policy (SDP), it trains an action-chunking diffusion policy to increase the probability of actions within these sets. A step-masked denoising loss combines accepted relabels with available human corrections in partially supervised chunks. Experiments across five simulated manipulation tasks in online and offline settings show that SeRA improves policy performance over SDP and outperforms baselines that imitate historical robot actions or exact relabels. On a real-robot tomato-picking task, SeRA achieves 80% success, compared with 40% for SDP, using the same human feedback and training budget. These results demonstrate that relabeled autonomous robot experience can complement human corrections to improve policy performance.</p>
+  </section>
+
+  <hr class="section-line">
+
+  <section>
+    <h2 id="motivation">Human corrections are only part of the data</h2>
+    <p><span class="lead">Most interaction data has no human label.</span> In interactive imitation learning, a human teacher intervenes during deployment. This produces sparse <span class="c-human">human corrections</span> and abundant <span class="c-robot">autonomous robot experience</span> without human action labels. Learning only from the corrections leaves this experience unused for action supervision.</p>
+    <p><span class="lead">Historical robot actions can be suboptimal.</span> Prior work retains them as imitation targets: IWR imitates them alongside the corrections, CEILing selects useful behavior with evaluative feedback, and Sirius downweights pre-intervention actions. However, an autonomous action need not be optimal, even when it does not trigger an intervention or occurs in a successful trajectory. Retaining it as a target can reinforce suboptimal behavior.</p>
+  </section>
+
+  <hr class="section-line">
+
+  <section>
+    <h2 id="overview">Later policies can teach earlier observations</h2>
+    <p><span class="lead">Key insight.</span> Later policies incorporate additional human corrections and may generalize these corrections to observations collected earlier. SeRA therefore treats autonomous robot experience as unlabeled data and revisits it with later policies.</p>
+    <div class="process narrow" data-process>
+      <div class="video-media">
+        <video src="assets/videos/fig1-process.mp4" poster="assets/posters/fig1-process.jpg" muted playsinline preload="metadata" aria-label="Step-by-step build of the SeRA framework figure."></video>
+        <button class="video-toggle" type="button" aria-label="Play or pause the framework video"></button>
+        <div class="video-progress"><span></span></div>
+      </div>
+      <div class="process-bar">
+        <ol class="process-steps" id="fig1-steps"><li><button type="button" data-t="0.00" data-title="Robot rollout" data-text="During online interaction, a human teacher intervenes while the robot acts. The rollout mixes human corrections with autonomous robot actions." aria-label="Step 1: Robot rollout">1</button></li><li><button type="button" data-t="1.90" data-title="Two datasets" data-text="Corrections enter the correction dataset. Autonomous robot experience enters the unlabeled dataset, which has no human action labels." aria-label="Step 2: Two datasets">2</button></li><li><button type="button" data-t="3.36" data-title="Old observations stay useful" data-text="Historical robot actions can be suboptimal. Instead of imitating them, SeRA revisits the observations in the unlabeled dataset." aria-label="Step 3: Old observations stay useful">3</button></li><li><button type="button" data-t="4.65" data-title="A later policy relabels them" data-text="A later policy relabels the old observations with new action chunks. The historical actions remain available to scale the desired action sets." aria-label="Step 4: A later policy relabels them">4</button></li><li><button type="button" data-t="6.62" data-title="Learn from desired action sets" data-text="Accepted relabels define desired action sets. The policy learns to place more probability within these sets, alongside the human corrections." aria-label="Step 5: Learn from desired action sets">5</button></li><li><button type="button" data-t="8.08" data-title="Relabel again" data-text="The updated policy can relabel the old observations again." aria-label="Step 6: Relabel again">6</button></li></ol>
+        <div class="process-controls">
+          <button class="pill" type="button" data-action="toggle">Play</button>
+          <button class="pill" type="button" data-action="fullscreen">Full screen</button>
+        </div>
+      </div>
+      <p class="process-caption"></p>
+      <p class="process-link"><a href="assets/figures/fig1-overview.svg" target="_blank" rel="noopener">Open the complete figure</a></p>
+    </div>
+    <p>SeRA has three components:</p>
+    <ul class="findings">
+      <li><strong>Cross-round policy relabeling.</strong> Later checkpoints relabel earlier observations, and agreement across checkpoints filters the relabels.</li>
+      <li><strong>Set-valued targets.</strong> Each accepted relabel defines a desired action set. Following SDP, the action-chunking diffusion policy is trained to increase the probability of actions within these sets, so it need not reproduce an imperfect relabel exactly.</li>
+      <li><strong>Step-masked denoising loss.</strong> Accepted relabels and available human corrections are combined within one chunk, and unsupported steps are excluded from the loss.</li>
+    </ul>
+  </section>
+
+  <hr class="section-line">
+
+  <section>
+    <h2 id="interactive">Agreement can be imperfect, so learn from sets</h2>
+    <p>Multiple checkpoints can share the same error, so agreement is a proxy for reliability, not a guarantee. SeRA uses each accepted relabel as the center of a desired action set instead of an exact target. The radius is scaled by the distance to the historical robot action. <strong>Drag any point</strong> or move the sliders. <span class="c-relabel">Relabels</span> change the agreement test and the mask, while <span class="c-robot">historical robot actions</span> and <span class="c-human">human corrections</span> change the desired sets.</p>
+
+    <div class="demo" id="demo">
+      <div class="demo-bar">
+        <div class="demo-meta" id="demo-meta"></div>
+        <div class="demo-actions">
+          <button class="pill" type="button" data-scenario="unlabeled" aria-pressed="true">Unlabeled chunk</button>
+          <button class="pill" type="button" data-scenario="partial" aria-pressed="false">Partially labeled chunk</button>
+          <button class="pill" type="button" id="demo-reset">Reset</button>
+        </div>
+      </div>
+      <svg class="demo-canvas" id="demo-canvas" viewBox="60 60 720 300" role="img" aria-label="Toy action chunk with relabels from later checkpoints, the historical robot actions, and desired action sets around accepted steps."></svg>
+      <div class="demo-legend" aria-hidden="true">
+        <span><i style="border-color:#6a4cc9;background:#b6a2ea"></i>Human correction</span>
+        <span><i style="border-color:#ee9a4d;background:#f8c08d"></i>Historical robot action</span>
+        <span><i style="border-color:#6dbb4c;background:#b5e39b"></i>Accepted relabel</span>
+        <span><i style="border-color:#9a9a9a;background:#d6d6d6"></i>Discarded relabel</span>
+      </div>
+      <div class="demo-sliders">
+        <div class="demo-slider">
+          <label for="demo-count"><span>Later checkpoints <i>n</i></span><output id="demo-count-value"></output></label>
+          <input id="demo-count" type="range" min="2" max="10" step="1">
+          <div class="ends"><span>2: fewest</span><span>10: paper's minimum</span></div>
+        </div>
+        <div class="demo-slider">
+          <label for="demo-delta"><span>Variance threshold &delta;</span><output id="demo-delta-value"></output></label>
+          <input id="demo-delta" type="range" min="0" max="100" step="1">
+          <div class="ends"><span>stricter</span><span>looser</span></div>
+        </div>
+        <div class="demo-slider">
+          <label for="demo-radius"><span>Relabel radius ratio r<sup>N</sup></span><output id="demo-radius-value"></output></label>
+          <input id="demo-radius" type="range" min="0" max="1" step="0.05">
+          <div class="ends"><span>0: exact target</span><span>1: SeRA</span></div>
+        </div>
+      </div>
+      <div class="demo-table-wrap"><table class="demo-table" id="demo-table"></table></div>
+      <p class="demo-verdict" id="demo-verdict" aria-live="polite"></p>
+      <p class="demo-note">Illustrative toy example, not experimental data. It computes the paper's variance test and acceptance mask on a four-step 2-D chunk. The paper uses chunks of 16 steps and at least 10 later checkpoints.</p>
+    </div>
+  </section>
+
+  <hr class="section-line">
+
+  <section>
+    <h2 id="experiments">Experiments</h2>
+    <p>We evaluate SeRA in online and offline learning across five simulated manipulation tasks, and on a real-robot tomato-picking task. All baselines are built on SDP and differ in how they use autonomous robot experience.</p>
+
+    <h3 id="simulation">Simulation Benchmarks</h3>
+    <p>Five tasks: PushT, PickCan, Square, TwoArmLift, and ThreePiece. Online, each method collects its own data with a simulated teacher. Offline, all methods train on the same dataset. The methods are:</p>
+    <ul class="findings">
+      <li><strong>SDP</strong> learns only from complete teacher-labeled chunks.</li>
+      <li><strong>IWR</strong> imitates all autonomous robot experience, and <strong>CEILing</strong> imitates robot actions from successful trajectories.</li>
+      <li><strong>Sirius</strong> assigns zero weight to pre-intervention actions.</li>
+      <li><strong>Pseudo-labeling</strong> uses the same relabeling and filtering as SeRA, but imitates accepted relabels as exact targets.</li>
+      <li><strong>StepMask</strong> is the variant of SeRA without relabeling.</li>
+    </ul>
+
+    <div class="video-panel" id="sim-rollouts" data-video-panel>
+      <div class="video-panel-head">
+        <h4>Task Rollouts</h4>
+        <div class="video-panel-controls">
+          <button class="pill" type="button" data-action="reset">Reset</button>
+          <button class="pill" type="button" data-action="play">Play all</button>
+        </div>
+      </div>
+      <div class="task-picker" role="group" aria-label="Task">
+        <button class="pill is-on" type="button" aria-pressed="true">Square</button>
+        <button class="pill" type="button" aria-pressed="false">TwoArmLift</button>
+        <button class="pill" type="button" aria-pressed="false">ThreePiece</button>
+        <button class="pill" type="button" aria-pressed="false">PickCan</button>
+      </div>
+      <div data-task>
+        <div class="seed-picker" role="group" aria-label="Square seed">
+          <button class="pill is-on" type="button" aria-pressed="true">Seed 295120</button>
+          <button class="pill" type="button" aria-pressed="false">Seed 290140</button>
+          <button class="pill" type="button" aria-pressed="false">Seed 285130</button>
+        </div>
+        <div class="video-grid matched" data-seed-group>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-295120-sera.mp4" poster="assets/posters/square-295120-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-295120-stepmask.mp4" poster="assets/posters/square-295120-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-295120-sdp.mp4" poster="assets/posters/square-295120-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-295120-ceiling.mp4" poster="assets/posters/square-295120-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-295120-sirius.mp4" poster="assets/posters/square-295120-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-295120-iwr.mp4" poster="assets/posters/square-295120-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-295120-pseudo-labeling.mp4" poster="assets/posters/square-295120-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+        <div class="video-grid matched" data-seed-group hidden>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-290140-sera.mp4" poster="assets/posters/square-290140-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-290140-stepmask.mp4" poster="assets/posters/square-290140-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-290140-sdp.mp4" poster="assets/posters/square-290140-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-290140-ceiling.mp4" poster="assets/posters/square-290140-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-290140-sirius.mp4" poster="assets/posters/square-290140-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-290140-iwr.mp4" poster="assets/posters/square-290140-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-290140-pseudo-labeling.mp4" poster="assets/posters/square-290140-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+        <div class="video-grid matched" data-seed-group hidden>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-285130-sera.mp4" poster="assets/posters/square-285130-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-285130-stepmask.mp4" poster="assets/posters/square-285130-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-285130-sdp.mp4" poster="assets/posters/square-285130-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-285130-ceiling.mp4" poster="assets/posters/square-285130-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-285130-sirius.mp4" poster="assets/posters/square-285130-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-285130-iwr.mp4" poster="assets/posters/square-285130-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/square-285130-pseudo-labeling.mp4" poster="assets/posters/square-285130-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div data-task hidden>
+        <div class="seed-picker" role="group" aria-label="TwoArmLift seed">
+          <button class="pill is-on" type="button" aria-pressed="true">Seed 285110</button>
+          <button class="pill" type="button" aria-pressed="false">Seed 290150</button>
+          <button class="pill" type="button" aria-pressed="false">Seed 285120</button>
+        </div>
+        <div class="video-grid matched" data-seed-group>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285110-sera.mp4" poster="assets/posters/twoarm-285110-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285110-stepmask.mp4" poster="assets/posters/twoarm-285110-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285110-sdp.mp4" poster="assets/posters/twoarm-285110-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285110-ceiling.mp4" poster="assets/posters/twoarm-285110-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285110-sirius.mp4" poster="assets/posters/twoarm-285110-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285110-iwr.mp4" poster="assets/posters/twoarm-285110-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285110-pseudo-labeling.mp4" poster="assets/posters/twoarm-285110-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+        <div class="video-grid matched" data-seed-group hidden>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-290150-sera.mp4" poster="assets/posters/twoarm-290150-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-290150-stepmask.mp4" poster="assets/posters/twoarm-290150-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-290150-sdp.mp4" poster="assets/posters/twoarm-290150-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-290150-ceiling.mp4" poster="assets/posters/twoarm-290150-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-290150-sirius.mp4" poster="assets/posters/twoarm-290150-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-290150-iwr.mp4" poster="assets/posters/twoarm-290150-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-290150-pseudo-labeling.mp4" poster="assets/posters/twoarm-290150-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+        <div class="video-grid matched" data-seed-group hidden>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285120-sera.mp4" poster="assets/posters/twoarm-285120-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285120-stepmask.mp4" poster="assets/posters/twoarm-285120-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285120-sdp.mp4" poster="assets/posters/twoarm-285120-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285120-ceiling.mp4" poster="assets/posters/twoarm-285120-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285120-sirius.mp4" poster="assets/posters/twoarm-285120-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285120-iwr.mp4" poster="assets/posters/twoarm-285120-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/twoarm-285120-pseudo-labeling.mp4" poster="assets/posters/twoarm-285120-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div data-task hidden>
+        <div class="seed-picker" role="group" aria-label="ThreePiece seed">
+          <button class="pill is-on" type="button" aria-pressed="true">Seed 280130</button>
+          <button class="pill" type="button" aria-pressed="false">Seed 295110</button>
+          <button class="pill" type="button" aria-pressed="false">Seed 270120</button>
+        </div>
+        <div class="video-grid matched" data-seed-group>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-280130-sera.mp4" poster="assets/posters/threepiece-280130-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-280130-stepmask.mp4" poster="assets/posters/threepiece-280130-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-280130-sdp.mp4" poster="assets/posters/threepiece-280130-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-280130-ceiling.mp4" poster="assets/posters/threepiece-280130-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-280130-sirius.mp4" poster="assets/posters/threepiece-280130-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-280130-iwr.mp4" poster="assets/posters/threepiece-280130-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-280130-pseudo-labeling.mp4" poster="assets/posters/threepiece-280130-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+        <div class="video-grid matched" data-seed-group hidden>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-295110-sera.mp4" poster="assets/posters/threepiece-295110-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-295110-stepmask.mp4" poster="assets/posters/threepiece-295110-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-295110-sdp.mp4" poster="assets/posters/threepiece-295110-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-295110-ceiling.mp4" poster="assets/posters/threepiece-295110-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-295110-sirius.mp4" poster="assets/posters/threepiece-295110-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-295110-iwr.mp4" poster="assets/posters/threepiece-295110-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-295110-pseudo-labeling.mp4" poster="assets/posters/threepiece-295110-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+        <div class="video-grid matched" data-seed-group hidden>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-270120-sera.mp4" poster="assets/posters/threepiece-270120-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-270120-stepmask.mp4" poster="assets/posters/threepiece-270120-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-270120-sdp.mp4" poster="assets/posters/threepiece-270120-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-270120-ceiling.mp4" poster="assets/posters/threepiece-270120-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-270120-sirius.mp4" poster="assets/posters/threepiece-270120-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-270120-iwr.mp4" poster="assets/posters/threepiece-270120-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/threepiece-270120-pseudo-labeling.mp4" poster="assets/posters/threepiece-270120-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div data-task hidden>
+        <div class="seed-picker" role="group" aria-label="PickCan seed">
+          <button class="pill is-on" type="button" aria-pressed="true">Seed 285130</button>
+          <button class="pill" type="button" aria-pressed="false">Seed 295100</button>
+          <button class="pill" type="button" aria-pressed="false">Seed 285160</button>
+        </div>
+        <div class="video-grid matched" data-seed-group>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285130-sera.mp4" poster="assets/posters/pickcan-285130-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285130-stepmask.mp4" poster="assets/posters/pickcan-285130-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285130-sdp.mp4" poster="assets/posters/pickcan-285130-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285130-ceiling.mp4" poster="assets/posters/pickcan-285130-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285130-sirius.mp4" poster="assets/posters/pickcan-285130-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285130-iwr.mp4" poster="assets/posters/pickcan-285130-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285130-pseudo-labeling.mp4" poster="assets/posters/pickcan-285130-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+        <div class="video-grid matched" data-seed-group hidden>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-295100-sera.mp4" poster="assets/posters/pickcan-295100-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-295100-stepmask.mp4" poster="assets/posters/pickcan-295100-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-295100-sdp.mp4" poster="assets/posters/pickcan-295100-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-295100-ceiling.mp4" poster="assets/posters/pickcan-295100-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-295100-sirius.mp4" poster="assets/posters/pickcan-295100-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-295100-iwr.mp4" poster="assets/posters/pickcan-295100-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-295100-pseudo-labeling.mp4" poster="assets/posters/pickcan-295100-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+        <div class="video-grid matched" data-seed-group hidden>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285160-sera.mp4" poster="assets/posters/pickcan-285160-sera.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption><b>SeRA</b></figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285160-stepmask.mp4" poster="assets/posters/pickcan-285160-stepmask.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+StepMask, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+StepMask</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285160-sdp.mp4" poster="assets/posters/pickcan-285160-sdp.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285160-ceiling.mp4" poster="assets/posters/pickcan-285160-ceiling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+CEILing, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+CEILing</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285160-sirius.mp4" poster="assets/posters/pickcan-285160-sirius.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Sirius, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Sirius</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285160-iwr.mp4" poster="assets/posters/pickcan-285160-iwr.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome">Failure</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+IWR, failure"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+IWR</figcaption>
+          </figure>
+          <figure class="video-cell">
+            <div class="video-media square">
+              <video src="assets/videos/pickcan-285160-pseudo-labeling.mp4" poster="assets/posters/pickcan-285160-pseudo-labeling.jpg" muted playsinline preload="none"></video>
+              <span class="video-outcome success">Success</span>
+              <button class="video-toggle" type="button" aria-label="Play SDP+Pseudo-labeling, success"></button>
+              <div class="video-progress"><span></span></div>
+            </div>
+            <figcaption>SDP+Pseudo-labeling</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div class="video-note"><p>Selected policy evaluation rollouts. Within a seed, the objects start in the same place for every method.</p></div>
+    </div>
+
+    <div class="table-scroll" role="region" aria-label="Simulation success rates" tabindex="0">
+      <table class="results" id="simulation-table">
+        <thead>
+          <tr><th rowspan="2" class="group-end">Method</th><th colspan="5" class="group-end">Online</th><th colspan="5">Offline</th></tr>
+          <tr><th>PushT</th><th>PickCan</th><th>Square</th><th>TwoArmLift</th><th class="group-end">ThreePiece</th><th>PushT</th><th>PickCan</th><th>Square</th><th>TwoArmLift</th><th>ThreePiece</th></tr>
+        </thead>
+        <tbody>
+          <tr><th class="group-end">SDP</th><td>57.9<span class="sd">± 2.4</span></td><td>97.9<span class="sd">± 1.7</span></td><td>91.7<span class="sd">± 3.7</span></td><td>96.7<span class="sd">± 2.7</span></td><td class="group-end">94.0<span class="sd">± 3.1</span></td><td>86.5<span class="sd">± 0.7</span></td><td class="best">99.8<span class="sd">± 0.3</span></td><td>90.8<span class="sd">± 1.0</span></td><td>87.6<span class="sd">± 0.8</span></td><td>93.3<span class="sd">± 0.5</span></td></tr>
+          <tr><th class="group-end">SDP+IWR</th><td>41.2<span class="sd">± 6.4</span></td><td>84.0<span class="sd">± 0.3</span></td><td>69.5<span class="sd">± 0.0</span></td><td>90.0<span class="sd">± 2.5</span></td><td class="group-end">65.4<span class="sd">± 5.1</span></td><td>52.1<span class="sd">± 5.7</span></td><td>95.6<span class="sd">± 1.2</span></td><td>76.0<span class="sd">± 3.1</span></td><td>94.8</td><td>80.2<span class="sd">± 3.1</span></td></tr>
+          <tr><th class="group-end">SDP+Sirius</th><td>34.8<span class="sd">± 4.0</span></td><td>87.1<span class="sd">± 5.4</span></td><td>77.4<span class="sd">± 1.0</span></td><td>95.0<span class="sd">± 1.7</span></td><td class="group-end">62.1<span class="sd">± 5.5</span></td><td>49.4<span class="sd">± 3.6</span></td><td>95.9<span class="sd">± 1.5</span></td><td>81.3<span class="sd">± 2.9</span></td><td>95.6<span class="sd">± 1.2</span></td><td>78.1<span class="sd">± 3.7</span></td></tr>
+          <tr><th class="group-end">SDP+CEILing</th><td>52.6<span class="sd">± 5.7</span></td><td>95.2<span class="sd">± 2.0</span></td><td>83.8<span class="sd">± 4.7</span></td><td>97.9<span class="sd">± 3.0</span></td><td class="group-end">87.0<span class="sd">± 2.1</span></td><td>72.4<span class="sd">± 2.1</span></td><td>98.7<span class="sd">± 1.1</span></td><td>85.4<span class="sd">± 3.1</span></td><td>97.0<span class="sd">± 1.0</span></td><td>93.2<span class="sd">± 2.3</span></td></tr>
+          <tr><th class="group-end">SDP+Pseudo-labeling</th><td>70.5<span class="sd">± 5.4</span></td><td>73.1<span class="sd">± 19.9</span></td><td>75.6<span class="sd">± 13.1</span></td><td>87.4<span class="sd">± 7.1</span></td><td class="group-end">89.3<span class="sd">± 3.0</span></td><td>66.4<span class="sd">± 1.0</span></td><td>11.9<span class="sd">± 10.9</span></td><td>65.0<span class="sd">± 26.6</span></td><td>92.9<span class="sd">± 0.0</span></td><td>37.6<span class="sd">± 30.7</span></td></tr>
+          <tr class="ours"><th class="group-end">SDP+StepMask (ours)</th><td>71.0<span class="sd">± 3.9</span></td><td>98.6<span class="sd">± 0.5</span></td><td>92.1<span class="sd">± 1.0</span></td><td class="best">99.5<span class="sd">± 0.0</span></td><td class="group-end">96.3<span class="sd">± 1.5</span></td><td>87.5<span class="sd">± 2.6</span></td><td class="best">99.8<span class="sd">± 0.3</span></td><td>93.3<span class="sd">± 1.6</span></td><td>96.5<span class="sd">± 0.9</span></td><td>97.1<span class="sd">± 0.8</span></td></tr>
+          <tr class="ours"><th class="group-end">SeRA (ours)</th><td class="best">79.8<span class="sd">± 2.8</span></td><td class="best">99.8<span class="sd">± 0.3</span></td><td class="best">96.2<span class="sd">± 0.5</span></td><td>99.4<span class="sd">± 0.3</span></td><td class="best group-end">98.4<span class="sd">± 0.7</span></td><td class="best">92.0<span class="sd">± 3.5</span></td><td class="best">99.8<span class="sd">± 0.3</span></td><td class="best">96.3<span class="sd">± 1.5</span></td><td class="best">98.0<span class="sd">± 0.8</span></td><td class="best">98.9<span class="sd">± 0.7</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-note">Success rate (%), averaged over the last 21 checkpoints, as mean ± standard deviation over three seeds. The best result in each column is highlighted.</p>
+
+    <ul class="findings">
+      <li><strong>SeRA consistently outperforms the baselines.</strong> It has the highest success rate among all baselines on every task in both settings, tying SDP on offline PickCan at 99.8%. Its own variant, StepMask, is 0.1 points higher on online TwoArmLift, where both are near the ceiling.</li>
+      <li><strong>Imitating historical robot actions can reduce task success.</strong> IWR and Sirius fall below SDP on every online task, and on every offline task except TwoArmLift.</li>
+      <li><strong>Exact relabel targets can hurt.</strong> Pseudo-labeling falls far below SDP on most tasks, especially offline.</li>
+    </ul>
+
+    <h3 id="analysis">Component Analysis</h3>
+    <p>We remove one component of SeRA at a time in offline learning.</p>
+
+    <div class="table-scroll" role="region" aria-label="Component analysis" tabindex="0">
+      <table class="results comfortable">
+        <thead><tr><th>Variant</th><th>PushT</th><th>Square</th><th>TwoArmLift</th><th>ThreePiece</th></tr></thead>
+        <tbody>
+          <tr class="ours"><th>SeRA</th><td class="best">92.0<span class="sd">± 3.5</span></td><td class="best">96.3<span class="sd">± 1.5</span></td><td class="best">98.0<span class="sd">± 0.8</span></td><td class="best">98.9<span class="sd">± 0.7</span></td></tr>
+          <tr><th>w/o filtering</th><td>84.5<span class="sd">± 2.4</span></td><td>31.4<span class="sd">± 6.7</span></td><td>26.7<span class="sd">± 0.0</span></td><td>9.5<span class="sd">± 8.8</span></td></tr>
+          <tr><th>w/o set-valued targets</th><td>78.1<span class="sd">± 9.5</span></td><td>59.4<span class="sd">± 21.5</span></td><td>94.1<span class="sd">± 2.2</span></td><td>36.3<span class="sd">± 21.7</span></td></tr>
+          <tr><th>w/o relabeling</th><td>87.5<span class="sd">± 2.6</span></td><td>93.3<span class="sd">± 1.6</span></td><td>96.5<span class="sd">± 0.9</span></td><td>97.1<span class="sd">± 0.8</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-note">Offline success rate (%), mean ± standard deviation over three seeds. “w/o filtering” removes checkpoint consistency filtering. “w/o set-valued targets” sets the relabel radius ratio to 10<sup>−4</sup>, yielding approximately point-valued supervision. “w/o relabeling” uses only retained human supervision (StepMask).</p>
+
+    <ul class="findings">
+      <li><strong>Consistency filtering improves learning from relabels.</strong> Removing it lowers success from 96.3% to 31.4% on Square and from 98.9% to 9.5% on ThreePiece.</li>
+      <li><strong>Set-valued targets improve task success.</strong> With filtering retained, approximately point-valued targets lower success on all four tasks, most sharply on Square and ThreePiece.</li>
+      <li><strong>Relabeling complements partial human supervision.</strong> It improves success on all four tasks over the variant that uses only retained human supervision.</li>
+    </ul>
+
+    <h3 id="real-results">Real-Robot Results</h3>
+
+    <div class="video-panel" data-video-panel>
+      <div class="video-panel-head">
+        <h4>Tomato Picking, Top Tomato at Back</h4>
+        <div class="video-panel-controls">
+          <button class="pill" type="button" data-action="reset">Reset</button>
+          <button class="pill" type="button" data-action="play">Play all</button>
+        </div>
+      </div>
+      <div class="video-grid">
+        <figure class="video-cell">
+          <div class="video-media">
+            <video src="assets/videos/sera-back.mp4" poster="assets/posters/sera-back.jpg" muted playsinline preload="metadata"></video>
+            <span class="video-outcome success">Success</span>
+            <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+            <div class="video-progress"><span></span></div>
+          </div>
+          <figcaption><b>SeRA</b></figcaption>
+        </figure>
+        <figure class="video-cell">
+          <div class="video-media">
+            <video src="assets/videos/stepmask-back.mp4" poster="assets/posters/stepmask-back.jpg" muted playsinline preload="metadata"></video>
+            <span class="video-outcome">Failure</span>
+            <button class="video-toggle" type="button" aria-label="Play StepMask, failure"></button>
+            <div class="video-progress"><span></span></div>
+          </div>
+          <figcaption>StepMask</figcaption>
+        </figure>
+        <figure class="video-cell">
+          <div class="video-media">
+            <video src="assets/videos/sirius-back.mp4" poster="assets/posters/sirius-back.jpg" muted playsinline preload="metadata"></video>
+            <span class="video-outcome">Failure</span>
+            <button class="video-toggle" type="button" aria-label="Play Sirius, failure"></button>
+            <div class="video-progress"><span></span></div>
+          </div>
+          <figcaption>Sirius</figcaption>
+        </figure>
+        <figure class="video-cell">
+          <div class="video-media">
+            <video src="assets/videos/ceiling-back.mp4" poster="assets/posters/ceiling-back.jpg" muted playsinline preload="metadata"></video>
+            <span class="video-outcome">Failure</span>
+            <button class="video-toggle" type="button" aria-label="Play CEILing, failure"></button>
+            <div class="video-progress"><span></span></div>
+          </div>
+          <figcaption>CEILing</figcaption>
+        </figure>
+      </div>
+      <div class="video-note"><p>4× speed. Selected examples, separate from the aggregate evaluation below.</p></div>
+    </div>
+
+    <p>The robot picks two tomatoes from a plant and places them in a bowl. A trial succeeds only if both tomatoes reach the white bowl. We evaluate two configurations with 10 trials each per method. Every method uses the same demonstrations and corrections, and is trained for 14 hours on an NVIDIA A40 GPU.</p>
+    <div class="table-scroll" role="region" aria-label="Real-robot results" tabindex="0">
+      <table class="results comfortable">
+        <thead><tr><th>Method</th><th>Top tomato at front</th><th>Top tomato at back</th><th>Total</th><th>Success</th><th>Autonomous samples used</th></tr></thead>
+        <tbody>
+          <tr><th>SDP</th><td>6/10</td><td>2/10</td><td>8/20</td><td>40%</td><td>—</td></tr>
+          <tr><th>SDP+IWR</th><td>3/10</td><td>0/10</td><td>3/20</td><td>15%</td><td>19,200</td></tr>
+          <tr><th>SDP+Sirius</th><td>8/10</td><td>3/10</td><td>11/20</td><td>55%</td><td>15,200</td></tr>
+          <tr><th>SDP+CEILing</th><td>6/10</td><td>4/10</td><td>10/20</td><td>50%</td><td>16,800</td></tr>
+          <tr class="ours"><th>SDP+StepMask (ours)</th><td>9/10</td><td>3/10</td><td>12/20</td><td>60%</td><td>4,591</td></tr>
+          <tr class="ours"><th>SeRA (ours)</th><td class="best">10/10</td><td class="best">6/10</td><td class="best">16/20</td><td class="best">80%</td><td>12,905</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-note">Successful trials per method. Autonomous samples used are counted after training and include the 4,591 chunks with partial human actions.</p>
+
+    <ul class="findings">
+      <li><strong>Highest success in both configurations.</strong> SeRA reaches 80%, compared with 40% for SDP and 60% for StepMask, with the same human feedback and training budget.</li>
+      <li><strong>Relabeling helps beyond partial human actions.</strong> StepMask retains partial human actions but does not relabel, and SeRA exceeds it by four successful trials.</li>
+      <li><strong>Imitating all historical actions performs worst.</strong> IWR succeeds in 3 of 20 trials and fails every trial with the top tomato at the back.</li>
+    </ul>
+  </section>
+
+  <footer class="site-footer">This page is anonymized for review.</footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Contents highlighting ---------- */
+  var tocLinks = Array.prototype.slice.call(document.querySelectorAll('.page-toc a'));
+  if ('IntersectionObserver' in window && tocLinks.length) {
+    var byId = {};
+    tocLinks.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+    var spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        tocLinks.forEach(function (a) { a.classList.remove('is-active'); });
+        byId[entry.target.id].classList.add('is-active');
+      });
+    }, { rootMargin: '-12% 0px -78% 0px' });
+    Object.keys(byId).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) spy.observe(el);
+    });
+  }
+
+  /* ---------- Videos ---------- */
+  function setPlayingState(video) {
+    var media = video.closest('.video-media');
+    media.classList.toggle('is-playing', !video.paused && !video.ended);
+  }
+
+  function playFromStart(video) {
+    video.currentTime = 0;
+    var started = video.play();
+    if (started && started.catch) started.catch(function () {});
+  }
+
+  document.querySelectorAll('.video-media').forEach(function (media) {
+    var video = media.querySelector('video');
+    var fill = media.querySelector('.video-progress span');
+    var frame = null;
+    function draw() {
+      if (video.duration) fill.style.width = (100 * video.currentTime / video.duration) + '%';
+      frame = video.paused || video.ended ? null : requestAnimationFrame(draw);
+    }
+    media.querySelector('.video-toggle').addEventListener('click', function () {
+      if (video.ended) playFromStart(video);
+      else if (video.paused) { var p = video.play(); if (p && p.catch) p.catch(function () {}); }
+      else video.pause();
+    });
+    video.addEventListener('play', function () { setPlayingState(video); if (frame === null) frame = requestAnimationFrame(draw); });
+    ['pause', 'ended', 'seeked'].forEach(function (name) {
+      video.addEventListener(name, function () { setPlayingState(video); draw(); });
+    });
+  });
+
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  document.querySelectorAll('[data-video-panel]').forEach(function (panel) {
+    function clips() {
+      var task = panel.querySelector('[data-task]:not([hidden])') || panel;
+      return (task.querySelector('[data-seed-group]:not([hidden])') || task).querySelectorAll('video');
+    }
+    function reset() {
+      clips().forEach(function (v) { v.pause(); v.currentTime = 0; });
+    }
+    // Each button shows the matching item and hides the others.
+    function picker(buttons, items) {
+      buttons.forEach(function (button, chosen) {
+        button.addEventListener('click', function () {
+          reset();
+          items.forEach(function (item, i) { item.hidden = i !== chosen; });
+          buttons.forEach(function (b, i) {
+            b.classList.toggle('is-on', i === chosen);
+            b.setAttribute('aria-pressed', i === chosen ? 'true' : 'false');
+          });
+          if (!reducedMotion) clips().forEach(playFromStart);
+        });
+      });
+    }
+    panel.querySelector('[data-action="play"]').addEventListener('click', function () {
+      clips().forEach(playFromStart);
+    });
+    panel.querySelector('[data-action="reset"]').addEventListener('click', reset);
+    picker(panel.querySelectorAll('.task-picker button'), panel.querySelectorAll('[data-task]'));
+    panel.querySelectorAll('[data-task]').forEach(function (task) {
+      picker(task.querySelectorAll('.seed-picker button'), task.querySelectorAll('[data-seed-group]'));
+    });
+  });
+
+  var heroVideos = document.querySelectorAll('#hero-videos video');
+  document.getElementById('hero-replay').addEventListener('click', function () {
+    heroVideos.forEach(playFromStart);
+  });
+  if (!reducedMotion) {
+    heroVideos.forEach(function (v) {
+      var p = v.play();
+      if (p && p.catch) p.catch(function () {});
+    });
+  }
+
+  /* ---------- Step-by-step figure videos ---------- */
+  document.querySelectorAll('[data-process]').forEach(function (root) {
+    var video = root.querySelector('video');
+    var chips = Array.prototype.slice.call(root.querySelectorAll('.process-steps button'));
+    var times = chips.map(function (chip) { return parseFloat(chip.getAttribute('data-t')); });
+    var caption = root.querySelector('.process-caption');
+    var toggle = root.querySelector('[data-action="toggle"]');
+    var fullscreen = root.querySelector('[data-action="fullscreen"]');
+    var active = -1;
+    var heldByViewer = false;
+    var stopAt = null;
+
+    function show(index) {
+      if (index === active) return;
+      active = index;
+      chips.forEach(function (chip, i) {
+        chip.classList.toggle('is-active', i === index);
+        chip.classList.toggle('is-done', i < index);
+        if (i === index) chip.setAttribute('aria-current', 'step');
+        else chip.removeAttribute('aria-current');
+      });
+      var chip = chips[index];
+      caption.textContent = '';
+      var count = document.createElement('span');
+      count.className = 'count';
+      count.textContent = 'Step ' + (index + 1) + ' of ' + chips.length;
+      var title = document.createElement('strong');
+      title.textContent = chip.getAttribute('data-title') + '. ';
+      caption.appendChild(count);
+      caption.appendChild(title);
+      caption.appendChild(document.createTextNode(chip.getAttribute('data-text')));
+    }
+
+    function sync() {
+      var index = 0;
+      for (var i = 0; i < times.length; i++) if (video.currentTime >= times[i] - 0.02) index = i;
+      show(index);
+    }
+
+    function label() {
+      toggle.textContent = video.ended ? 'Replay' : video.paused ? 'Play' : 'Pause';
+    }
+
+    function start() {
+      var p = video.play();
+      if (p && p.catch) p.catch(function () {});
+    }
+
+    // Steps pass quickly, so a clicked step stops near its end to leave time to read it.
+    function watchStop() {
+      if (stopAt === null) return;
+      if (video.currentTime >= stopAt) {
+        video.pause();
+        video.currentTime = stopAt;  // A late animation frame may have overshot it.
+        stopAt = null;
+        heldByViewer = true;
+        return;
+      }
+      requestAnimationFrame(watchStop);
+    }
+
+    ['timeupdate', 'seeked', 'seeking'].forEach(function (name) { video.addEventListener(name, sync); });
+    ['play', 'pause', 'ended', 'seeked'].forEach(function (name) { video.addEventListener(name, label); });
+
+    chips.forEach(function (chip, i) {
+      chip.addEventListener('click', function () {
+        heldByViewer = false;
+        // Stops before the outline fades, which starts 0.15 s before the step ends.
+        stopAt = i + 1 < times.length ? times[i + 1] - 0.2 : null;
+        video.currentTime = times[i];
+        show(i);
+        start();
+        requestAnimationFrame(watchStop);
+      });
+    });
+
+    toggle.addEventListener('click', function () {
+      stopAt = null;
+      if (video.ended) { video.currentTime = 0; start(); heldByViewer = false; }
+      else if (video.paused) { start(); heldByViewer = false; }
+      else { video.pause(); heldByViewer = true; }
+    });
+
+    root.querySelector('.video-toggle').addEventListener('click', function () {
+      stopAt = null;
+      heldByViewer = video.paused;
+    });
+
+    if (root.requestFullscreen) {
+      fullscreen.addEventListener('click', function () {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else root.requestFullscreen();
+      });
+    } else if (video.webkitEnterFullscreen) {
+      // iPhones only allow the video element itself to go full screen.
+      fullscreen.addEventListener('click', function () { video.webkitEnterFullscreen(); });
+    } else {
+      fullscreen.hidden = true;
+    }
+
+    // Plays while on screen, and stops when scrolled away, unless the viewer paused it.
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) { if (!video.paused) video.pause(); return; }
+          if (!reducedMotion && !heldByViewer && !video.ended) start();
+        });
+      }, { threshold: 0.6 }).observe(video);
+    }
+
+    show(0);
+    label();
+  });
+
+  /* ---------- Interactive demo ---------- */
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  var UNITS = 100;          // Canvas pixels per action unit.
+  var R_HUMAN = 0.1;        // Paper value for r^h in simulation.
+  var DELTA_MIN = 0.002, DELTA_MAX = 0.6, DELTA_DEFAULT = 0.05;
+  var COUNT_DEFAULT = 3, COUNT_MAX = 10;
+  var COLORS = {
+    human: ['#6a4cc9', '#b6a2ea'], robot: ['#ee9a4d', '#f8c08d'],
+    relabel: ['#6dbb4c', '#b5e39b'], discard: ['#9a9a9a', '#d6d6d6']
+  };
+
+  function offsetChunk(base, offsets) {
+    return base.map(function (p, j) { return p ? [p[0] + offsets[j][0], p[1] + offsets[j][1]] : null; });
+  }
+
+  // Checkpoints older than the three hand-placed ones, scattered around the latest
+  // by a set amount per step. The golden angle spreads them evenly without randomness.
+  function olderChunks(latest, spread) {
+    var chunks = [];
+    for (var i = 0; i < COUNT_MAX - COUNT_DEFAULT; i++) {
+      var angle = (i + 1) * 2.4;
+      chunks.push(latest.map(function (p, j) {
+        return p ? [Math.round(p[0] + spread[j][0] * Math.cos(angle)), Math.round(p[1] + spread[j][1] * Math.sin(angle))] : null;
+      }));
+    }
+    return chunks;
+  }
+
+  // Each scenario mirrors a row of the paper's method figure. Checkpoints run from oldest to
+  // latest, and the latest supplies the relabel. The demo uses the newest n of them,
+  // so points dragged while hidden by the n slider are kept.
+  var SCENARIOS = {
+    unlabeled: function () {
+      var latest = [[230, 205], [365, 215], [505, 205], [645, 215]];
+      return {
+        h: 0, start: [90, 190], human: [],
+        robot: [[225, 150], [360, 140], [500, 120], [640, 110]],
+        checkpoints: olderChunks(latest, [[10, 10], [13, 13], [6, 58], [13, 13]]).concat([
+          offsetChunk(latest, [[-2, -9], [3, -13], [4, -62], [-2, -15]]),
+          offsetChunk(latest, [[3, 10], [-3, 14], [-5, 60], [3, 12]]),
+          latest
+        ])
+      };
+    },
+    partial: function () {
+      var latest = [null, null, [505, 245], [645, 250]];
+      return {
+        h: 2, start: [90, 205], human: [[225, 215], [360, 235]],
+        robot: [[215, 85], [350, 85], [495, 160], [630, 150]],
+        checkpoints: olderChunks(latest, [null, null, [10, 10], [12, 12]]).concat([
+          offsetChunk(latest, [null, null, [3, -9], [-3, -11]]),
+          offsetChunk(latest, [null, null, [-3, 10], [3, 12]]),
+          latest
+        ])
+      };
+    }
+  };
+
+  var canvas = document.getElementById('demo-canvas');
+  var deltaInput = document.getElementById('demo-delta');
+  var radiusInput = document.getElementById('demo-radius');
+  var countInput = document.getElementById('demo-count');
+  var scenarioButtons = document.querySelectorAll('[data-scenario]');
+  var state = { name: 'unlabeled', data: null, delta: DELTA_DEFAULT, radius: 1, count: COUNT_DEFAULT };
+  var drag = null;
+
+  function liveCheckpoints() { return state.data.checkpoints.slice(-state.count); }
+
+  function deltaToSlider(d) { return 100 * Math.log(d / DELTA_MIN) / Math.log(DELTA_MAX / DELTA_MIN); }
+  function sliderToDelta(x) { return DELTA_MIN * Math.pow(DELTA_MAX / DELTA_MIN, x / 100); }
+
+  // Total variance across checkpoints, with the n - 1 normalization of the paper.
+  function stepVariance(points) {
+    var n = points.length;
+    var mean = points.reduce(function (s, p) { return [s[0] + p[0] / n, s[1] + p[1] / n]; }, [0, 0]);
+    var total = points.reduce(function (s, p) {
+      var dx = (p[0] - mean[0]) / UNITS, dy = (p[1] - mean[1]) / UNITS;
+      return s + dx * dx + dy * dy;
+    }, 0);
+    return total / (n - 1);
+  }
+
+  function evaluate() {
+    var d = state.data, T = d.robot.length, chunks = liveCheckpoints();
+    var variance = [], test = [], mask = [], alive = true;
+    for (var j = 0; j < T; j++) {
+      if (j < d.h) { variance.push(null); test.push(null); mask.push(1); continue; }
+      var v = stepVariance(chunks.map(function (c) { return c[j]; }));
+      var passed = v < state.delta;
+      variance.push(v);
+      test.push(passed ? 1 : 0);
+      alive = alive && passed;
+      mask.push(alive ? 1 : 0);
+    }
+    return { variance: variance, test: test, mask: mask };
+  }
+
+  function el(name, attrs, parent) {
+    var node = document.createElementNS(SVG_NS, name);
+    Object.keys(attrs).forEach(function (k) { node.setAttribute(k, attrs[k]); });
+    if (parent) parent.appendChild(node);
+    return node;
+  }
+
+  function polyline(points, stroke, width, parent, extra) {
+    var attrs = { points: points.map(function (p) { return p.join(','); }).join(' '), fill: 'none', stroke: stroke, 'stroke-width': width, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+    Object.keys(extra || {}).forEach(function (k) { attrs[k] = extra[k]; });
+    return el('polyline', attrs, parent);
+  }
+
+  function node(p, palette, r, parent, opacity) {
+    return el('circle', { cx: p[0], cy: p[1], r: r, fill: palette[1], stroke: palette[0], 'stroke-width': 2, opacity: opacity === undefined ? 1 : opacity }, parent);
+  }
+
+  function draw(result) {
+    var d = state.data, T = d.robot.length, chunks = liveCheckpoints();
+    while (canvas.firstChild) canvas.removeChild(canvas.firstChild);
+
+    [100, 180, 260, 340].forEach(function (y) {
+      el('line', { x1: 60, x2: 780, y1: y, y2: y, stroke: '#f0ecec', 'stroke-width': 1 }, canvas);
+    });
+
+    var latest = chunks[chunks.length - 1];
+    var sets = el('g', {}, canvas);
+    for (var j = 0; j < T; j++) {
+      if (!result.mask[j]) continue;
+      var human = j < d.h, center = human ? d.human[j] : latest[j];
+      var dist = Math.hypot(center[0] - d.robot[j][0], center[1] - d.robot[j][1]);
+      var r = dist * (human ? R_HUMAN : state.radius);
+      if (r > 0.5) {
+        el('circle', { cx: center[0], cy: center[1], r: r, fill: human ? '#6a4cc9' : '#6dbb4c', 'fill-opacity': human ? 0.1 : 0.09, stroke: human ? '#6a4cc9' : '#6dbb4c', 'stroke-width': 1.6, 'stroke-opacity': 0.75 }, sets);
+      }
+    }
+
+    // Historical robot actions. Dashed steps were paired with a human action and never executed.
+    var lastHuman = d.h ? d.human[d.h - 1] : d.start;
+    if (d.h) {
+      polyline([d.start].concat(d.robot.slice(0, d.h)), COLORS.robot[0], 2.5, canvas, { 'stroke-dasharray': '2 7' });
+      polyline([lastHuman].concat(d.robot.slice(d.h)), COLORS.robot[0], 3, canvas);
+      polyline([d.start].concat(d.human), COLORS.human[0], 3.5, canvas);
+    } else {
+      polyline([d.start].concat(d.robot), COLORS.robot[0], 3, canvas);
+    }
+    d.robot.forEach(function (p) { node(p, COLORS.robot, 7, canvas); });
+    d.human.forEach(function (p) { node(p, COLORS.human, 8, canvas); });
+
+    // Relabels. The latest checkpoint is drawn last and thickest.
+    chunks.forEach(function (chunk, i) {
+      var isLatest = i === chunks.length - 1;
+      var previous = lastHuman;
+      for (var s = d.h; s < T; s++) {
+        var palette = result.mask[s] ? COLORS.relabel : COLORS.discard;
+        polyline([previous, chunk[s]], palette[0], isLatest ? 3.5 : 1.8, canvas, { opacity: isLatest ? 1 : 0.65 });
+        previous = chunk[s];
+      }
+    });
+    chunks.forEach(function (chunk, i) {
+      var isLatest = i === chunks.length - 1;
+      for (var s = d.h; s < T; s++) {
+        var palette = result.mask[s] ? COLORS.relabel : COLORS.discard;
+        node(chunk[s], palette, isLatest ? 8 : 6, canvas, isLatest ? 1 : 0.8);
+      }
+    });
+
+    // Boxes mark disagreement, as in panel (c) of the paper's method figure.
+    for (var k = d.h; k < T; k++) {
+      if (result.test[k]) continue;
+      var ys = chunks.map(function (c) { return c[k][1]; });
+      var xs = chunks.map(function (c) { return c[k][0]; });
+      var x0 = Math.min.apply(null, xs) - 18, y0 = Math.min.apply(null, ys) - 18;
+      el('rect', { x: x0, y: y0, width: Math.max.apply(null, xs) - x0 + 18, height: Math.max.apply(null, ys) - y0 + 18, rx: 9, fill: 'none', stroke: '#a6192e', 'stroke-width': 2.5, 'pointer-events': 'none' }, canvas);
+    }
+
+    node(d.start, d.h ? COLORS.human : COLORS.robot, 15, canvas);
+    var label = el('text', {
+      x: Math.min(Math.max(66, d.start[0] - 24), 660),
+      y: d.start[1] + (d.start[1] > 300 ? -28 : 52),
+      fill: '#666666', 'font-size': 16, 'font-family': 'Asap, sans-serif'
+    }, canvas);
+    label.textContent = 'old observation';
+
+    // Hit areas go last so nothing covers them. Relabels win where points overlap.
+    handle(d.start, 24, 'start', 0);
+    d.robot.forEach(function (p, j) { handle(p, 20, 'robot', j); });
+    d.human.forEach(function (p, j) { handle(p, 20, 'human', j); });
+    chunks.forEach(function (chunk, i) {
+      for (var s = d.h; s < T; s++) handle(chunk[s], 20, 'relabel', s, i);
+    });
+  }
+
+  function handle(p, r, kind, step, ckpt) {
+    var attrs = { cx: p[0], cy: p[1], r: r, fill: 'transparent', class: 'grab', 'data-kind': kind, 'data-step': step };
+    if (ckpt !== undefined) attrs['data-ckpt'] = ckpt;
+    el('circle', attrs, canvas);
+  }
+
+  function cell(tag, text, cls) {
+    var c = document.createElement(tag);
+    c.textContent = text;
+    if (cls) c.className = cls;
+    return c;
+  }
+
+  function fillTable(result) {
+    var table = document.getElementById('demo-table');
+    table.textContent = '';
+    var head = table.createTHead().insertRow();
+    head.appendChild(cell('th', 'Step j'));
+    result.mask.forEach(function (_, j) { head.appendChild(cell('th', String(j))); });
+    var body = table.createTBody();
+    var rows = [
+      ['Variance', function (j) { return result.variance[j] === null ? ['human', 'human'] : [result.variance[j].toFixed(3), '']; }],
+      ['Passes test', function (j) { return result.test[j] === null ? ['human', 'human'] : [String(result.test[j]), result.test[j] ? '' : 'fail']; }],
+      ['Mask g', function (j) { return [String(result.mask[j]), result.mask[j] ? 'on' : 'off']; }]
+    ];
+    rows.forEach(function (row) {
+      var tr = body.insertRow();
+      tr.appendChild(cell('th', row[0]));
+      result.mask.forEach(function (_, j) {
+        var r = row[1](j);
+        tr.appendChild(cell('td', r[0], r[1]));
+      });
+    });
+  }
+
+  function verdict(result) {
+    var d = state.data, T = d.robot.length, firstFail = -1, laterPass = -1;
+    for (var j = d.h; j < T; j++) {
+      if (firstFail < 0 && result.test[j] === 0) firstFail = j;
+      else if (firstFail >= 0 && result.test[j] === 1 && laterPass < 0) laterPass = j;
+    }
+    var text;
+    if (firstFail < 0) {
+      text = d.h ? 'Both relabeled steps pass, so human corrections and accepted relabels supervise the whole chunk.'
+                 : 'Every step passes, so the mask accepts the whole chunk.';
+    } else if (firstFail === 0) {
+      text = 'Step 0 fails the test, so the mask rejects the first step and this chunk provides no relabels.';
+    } else {
+      text = 'Step ' + firstFail + ' fails the test, so it and all later steps are rejected';
+      text += laterPass >= 0 ? ', although step ' + laterPass + ' passes individually.' : '.';
+      if (d.h) text += ' The human actions are still retained.';
+    }
+    if (state.radius === 0) text += ' With rᴺ = 0 the sets shrink to points, which is exact relabel imitation.';
+    return text;
+  }
+
+  function render() {
+    var result = evaluate();
+    draw(result);
+    fillTable(result);
+    document.getElementById('demo-verdict').textContent = verdict(result);
+    document.getElementById('demo-meta').textContent =
+      state.count + ' later checkpoints · ' + state.data.robot.length + ' steps · mask g = [' + result.mask.join(', ') + ']';
+    document.getElementById('demo-count-value').textContent = state.count;
+    document.getElementById('demo-delta-value').textContent = state.delta.toFixed(3);
+    document.getElementById('demo-radius-value').textContent = state.radius.toFixed(2);
+  }
+
+  function loadScenario(name) {
+    state.name = name;
+    state.data = SCENARIOS[name]();
+    scenarioButtons.forEach(function (b) {
+      var on = b.getAttribute('data-scenario') === name;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    render();
+  }
+
+  function canvasPoint(event) {
+    return new DOMPoint(event.clientX, event.clientY).matrixTransform(canvas.getScreenCTM().inverse());
+  }
+
+  function pointerPosition(event) {
+    var p = canvasPoint(event);
+    return [Math.max(70, Math.min(770, p.x)), Math.max(70, Math.min(350, p.y))];
+  }
+
+  // Points crowd together at high n, so a press takes the nearest point, not the
+  // topmost. Ties go to the handle drawn last.
+  function nearestHandle(event) {
+    var p = canvasPoint(event), best = null, bestDistance = Infinity;
+    canvas.querySelectorAll('.grab').forEach(function (h) {
+      var distance = Math.hypot(+h.getAttribute('cx') - p.x, +h.getAttribute('cy') - p.y);
+      if (distance <= +h.getAttribute('r') && distance <= bestDistance) { best = h; bestDistance = distance; }
+    });
+    return best;
+  }
+
+  canvas.addEventListener('pointerdown', function (event) {
+    var target = nearestHandle(event);
+    if (!target) return;
+    drag = {
+      kind: target.getAttribute('data-kind'),
+      step: +target.getAttribute('data-step'),
+      ckpt: +target.getAttribute('data-ckpt')
+    };
+    canvas.setPointerCapture(event.pointerId);
+    canvas.classList.add('is-dragging');
+    event.preventDefault();
+  });
+  canvas.addEventListener('pointermove', function (event) {
+    if (!drag) return;
+    var d = state.data, p = pointerPosition(event);
+    if (drag.kind === 'relabel') liveCheckpoints()[drag.ckpt][drag.step] = p;
+    else if (drag.kind === 'start') d.start = p;
+    else d[drag.kind][drag.step] = p;  // 'robot' or 'human'.
+    render();
+  });
+  function endDrag() { drag = null; canvas.classList.remove('is-dragging'); }
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  deltaInput.addEventListener('input', function () { state.delta = sliderToDelta(+deltaInput.value); render(); });
+  radiusInput.addEventListener('input', function () { state.radius = +radiusInput.value; render(); });
+  countInput.addEventListener('input', function () { state.count = +countInput.value; render(); });
+  scenarioButtons.forEach(function (b) {
+    b.addEventListener('click', function () { loadScenario(b.getAttribute('data-scenario')); });
+  });
+
+  function resetDemo() {
+    state.delta = DELTA_DEFAULT;
+    state.radius = 1;
+    state.count = COUNT_DEFAULT;
+    deltaInput.value = deltaToSlider(DELTA_DEFAULT);
+    radiusInput.value = 1;
+    countInput.value = COUNT_DEFAULT;
+    loadScenario(state.name);
+  }
+  document.getElementById('demo-reset').addEventListener('click', resetDemo);
+  resetDemo();
+})();
+</script>
+</body>
+</html>
