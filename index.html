@@ -76,7 +76,11 @@ strong { font-weight: 700; }
 
 /* Videos */
 .video-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; }
-.video-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.video-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--hero-gap); }
+.video-grid.two .video-cell .video-media { border-radius: 0.5rem; }
+/* Two 8:9 clips sized from the window height, so they fit below the title. */
+.hero-compare { --hero-gap: clamp(0.75rem, 4vw, 2.5rem); max-width: calc(min(42vh, 30rem) * 16 / 9 + var(--hero-gap)); margin: 0 auto; }
+.hero-compare .video-outcome { top: 0.625rem; left: 0.625rem; padding: 0.25rem 0.75rem; font-size: 1.125rem; }
 .video-grid[hidden] { display: none; }
 .task-picker, .seed-picker { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-bottom: 0.625rem; }
 .seed-picker .pill { padding: 0.25rem 0.75rem; font-size: 0.875rem; }
@@ -103,7 +107,7 @@ strong { font-weight: 700; }
 .video-outcome.success { background: rgba(35, 105, 45, 0.92); }
 .video-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-top: 0.625rem; }
 .video-note p { margin: 0; color: var(--muted); font-size: 1rem; font-style: italic; }
-.hero-result { margin: 1.125rem 0 0; }
+.hero-result { margin: 1.125rem 0 0; text-align: center; text-wrap: balance; }
 
 .video-panel { margin-top: 1.75rem; }
 .video-panel + p { margin-top: 1.25rem; }
@@ -120,7 +124,8 @@ strong { font-weight: 700; }
 
 /* Step-by-step figure videos */
 .process { margin: 1.25rem 0 1.125rem; }
-.process.narrow { max-width: 56.25rem; margin-left: auto; margin-right: auto; }
+/* Fig. 1 is 1600 x 956. Its height follows the window, so the steps and caption stay in view. */
+.process.narrow { max-width: calc(min(55vh, 28rem) * 1600 / 956); margin-left: auto; margin-right: auto; }
 .process .video-media { overflow: visible; background: #ffffff; }
 .process .video-media video { aspect-ratio: auto; height: auto; background: #ffffff; }
 .process .video-toggle::after { display: none; }
@@ -134,7 +139,7 @@ strong { font-weight: 700; }
 .process-steps button.is-active { border-color: var(--accent-text); background: var(--accent-text); color: #ffffff; }
 .process-controls { display: flex; gap: 0.5rem; }
 .process-controls .pill { padding: 0.25rem 0.75rem; font-size: 0.875rem; }
-.process-caption { min-height: 6rem; margin: 0.625rem 0 0; }
+.process-caption { min-height: 7rem; margin: 0.625rem 0 0; }
 .process-caption .count { display: block; color: var(--muted); font-size: 0.875rem; }
 .process-link { margin: 0; font-size: 0.9375rem; }
 .process:fullscreen { display: flex; flex-direction: column; justify-content: center; margin: 0; padding: 1.5rem; max-width: none; background: #ffffff; overflow: auto; }
@@ -246,40 +251,45 @@ strong { font-weight: 700; }
 
   <p class="tldr"><span class="lead">TL;DR:</span> SeRA relabels old robot experience with later policies, then learns from the relabels as desired action sets, not exact targets.</p>
 
-  <section aria-label="Real-robot rollouts of SeRA">
-    <div class="video-grid two" id="hero-videos">
-      <figure class="video-cell">
-        <div class="video-media">
-          <video src="assets/videos/sera-front.mp4" poster="assets/posters/sera-front.jpg" muted playsinline preload="auto"></video>
-          <button class="video-toggle" type="button" aria-label="Play SeRA rollout, top tomato at front"></button>
-          <div class="video-progress"><span></span></div>
-        </div>
-        <figcaption><b>SeRA</b>, top tomato at front</figcaption>
-      </figure>
-      <figure class="video-cell">
-        <div class="video-media">
-          <video src="assets/videos/sera-back.mp4" poster="assets/posters/sera-back.jpg" muted playsinline preload="auto"></video>
-          <button class="video-toggle" type="button" aria-label="Play SeRA rollout, top tomato at back"></button>
-          <div class="video-progress"><span></span></div>
-        </div>
-        <figcaption><b>SeRA</b>, top tomato at back</figcaption>
-      </figure>
-    </div>
-    <div class="video-note">
-      <p>Autonomous evaluation rollouts at 4× speed. The inset is the wrist camera.</p>
-      <button class="pill" type="button" id="hero-replay">Replay</button>
+  <section aria-label="Real-robot rollouts of SDP and SeRA">
+    <div class="hero-compare">
+      <div class="video-grid two" id="hero-videos">
+        <figure class="video-cell">
+          <div class="video-media">
+            <video src="assets/videos/sdp-back.mp4" poster="assets/posters/sdp-back.jpg" muted playsinline preload="auto"></video>
+            <span class="video-outcome">Failure</span>
+            <button class="video-toggle" type="button" aria-label="Play SDP, failure"></button>
+            <div class="video-progress"><span></span></div>
+          </div>
+          <figcaption><b>SDP</b></figcaption>
+        </figure>
+        <figure class="video-cell">
+          <div class="video-media">
+            <video src="assets/videos/sera-back.mp4" poster="assets/posters/sera-back.jpg" muted playsinline preload="auto"></video>
+            <span class="video-outcome success">Success</span>
+            <button class="video-toggle" type="button" aria-label="Play SeRA, success"></button>
+            <div class="video-progress"><span></span></div>
+          </div>
+          <figcaption><b>SeRA</b></figcaption>
+        </figure>
+      </div>
+      <div class="video-note">
+        <p>Selected rollouts at 4× speed, top tomato at back. Inset: wrist camera.</p>
+        <button class="pill" type="button" id="hero-replay">Replay</button>
+      </div>
     </div>
     <p class="hero-result">On the real robot, SeRA succeeds in <strong>16 of 20</strong> trials, compared with <strong>8 of 20</strong> for SDP, using the same human feedback and training budget.</p>
   </section>
 
   <section class="abstract">
-    <p><span class="lead">Abstract:</span> Interactive imitation learning enables robots to learn from human interventions during deployment. These interactions naturally produce sparse human corrections and abundant autonomous robot experience without human action labels. Yet existing methods either leave this experience unused for action supervision or imitate historical robot actions, which can reinforce suboptimal behavior. To address this limitation, we propose Set-valued Relabeling of Autonomous experience (SeRA), a framework that learns from autonomous robot experience through set-valued supervision of policy relabels. Later policy checkpoints relabel this experience, and agreement across checkpoints filters the relabels. Since agreement does not guarantee correctness, SeRA constructs desired action sets around accepted relabels. Following Set-Supervised Diffusion Policy (SDP), it trains an action-chunking diffusion policy to increase the probability of actions within these sets. A step-masked denoising loss combines accepted relabels with available human corrections in partially supervised chunks. Experiments across five simulated manipulation tasks in online and offline settings show that SeRA improves policy performance over SDP and outperforms baselines that imitate historical robot actions or exact relabels. On a real-robot tomato-picking task, SeRA achieves 80% success, compared with 40% for SDP, using the same human feedback and training budget. These results demonstrate that relabeled autonomous robot experience can complement human corrections to improve policy performance.</p>
+    <p><span class="lead">Abstract:</span> Interactive imitation learning enables robots to learn from human interventions during deployment. These interactions naturally produce sparse human corrections and abundant autonomous robot experience without human action labels. Yet existing methods either leave this experience unused for action supervision or imitate historical robot actions, which can reinforce suboptimal behavior. To address this limitation, we propose <span class="lead">Set-valued Relabeling of Autonomous experience (SeRA)</span>, a framework that learns from autonomous robot experience through set-valued supervision of policy relabels.</p>
+    <p>Later policy checkpoints relabel this experience, and agreement across checkpoints filters the relabels. Since agreement does not guarantee correctness, <span class="lead">SeRA</span> constructs desired action sets around accepted relabels. Following Set-Supervised Diffusion Policy (SDP), it trains an action-chunking diffusion policy to increase the probability of actions within these sets. A step-masked denoising loss combines accepted relabels with available human corrections in partially supervised chunks. Experiments across five simulated manipulation tasks in online and offline settings show that <span class="lead">SeRA</span> improves policy performance over SDP and outperforms baselines that imitate historical robot actions or exact relabels. On a real-robot tomato-picking task, <span class="lead">SeRA</span> achieves 80% success, compared with 40% for SDP, using the same human feedback and training budget. These results demonstrate that relabeled autonomous robot experience can complement human corrections to improve policy performance.</p>
   </section>
 
   <hr class="section-line">
 
   <section>
-    <h2 id="motivation">Human corrections are only part of the data</h2>
+    <h2 id="motivation">Motivation: Human corrections are only part of the data</h2>
     <p><span class="lead">Most interaction data has no human label.</span> In interactive imitation learning, a human teacher intervenes during deployment. This produces sparse <span class="c-human">human corrections</span> and abundant <span class="c-robot">autonomous robot experience</span> without human action labels. Learning only from the corrections leaves this experience unused for action supervision.</p>
     <p><span class="lead">Historical robot actions can be suboptimal.</span> Prior work retains them as imitation targets: IWR imitates them alongside the corrections, CEILing selects useful behavior with evaluative feedback, and Sirius downweights pre-intervention actions. However, an autonomous action need not be optimal, even when it does not trigger an intervention or occurs in a successful trajectory. Retaining it as a target can reinforce suboptimal behavior.</p>
   </section>
